@@ -1,0 +1,1116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Rangebook Calendar</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #171717;
+        --muted: #66605c;
+        --paper: #fffefd;
+        --surface: #f6f7f2;
+        --line: #1f1f1f;
+        --accent: #e84f3d;
+        --accent-2: #12a594;
+        --accent-3: #f5c542;
+        --accent-soft: rgba(232, 79, 61, 0.15);
+        --range: rgba(18, 165, 148, 0.18);
+        --shadow: 0 30px 70px rgba(0, 0, 0, 0.18);
+        --radius: 8px;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(90deg, rgba(23, 23, 23, 0.05) 1px, transparent 1px),
+          linear-gradient(0deg, rgba(23, 23, 23, 0.04) 1px, transparent 1px),
+          #f0f2ec;
+        background-size: 40px 40px;
+        color: var(--ink);
+      }
+
+      button,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .app {
+        width: min(1440px, 100%);
+        margin: 0 auto;
+        padding: 22px;
+      }
+
+      .topline {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 18px;
+        align-items: end;
+        margin: 0 0 18px;
+      }
+
+      .kicker {
+        margin: 0 0 8px;
+        font-size: 0.76rem;
+        letter-spacing: 0;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 800;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 5.8rem);
+        line-height: 0.9;
+        max-width: 980px;
+      }
+
+      .microcopy {
+        margin: 12px 0 0;
+        max-width: 690px;
+        color: #45413d;
+        font-size: clamp(0.96rem, 1.6vw, 1.08rem);
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .pill-button {
+        border: 2px solid var(--line);
+        background: var(--paper);
+        color: var(--ink);
+        border-radius: var(--radius);
+        padding: 10px 14px;
+        box-shadow: 4px 4px 0 var(--line);
+        font-weight: 800;
+        transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+      }
+
+      .pill-button:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: 6px 6px 0 var(--line);
+      }
+
+      .pill-button:active {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0 var(--line);
+      }
+
+      .calendar-shell {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(360px, 0.9fr) minmax(560px, 1.35fr) minmax(300px, 0.72fr);
+        gap: 0;
+        min-height: 720px;
+        border: 3px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--paper);
+        box-shadow: var(--shadow);
+        overflow: clip;
+      }
+
+      .calendar-shell::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto;
+        height: 38px;
+        background:
+          radial-gradient(circle at 22px 19px, #1c1c1c 0 5px, transparent 6px),
+          radial-gradient(circle at 72px 19px, #1c1c1c 0 5px, transparent 6px),
+          linear-gradient(90deg, #e84f3d, #12a594 45%, #f5c542);
+        background-size: 100px 38px, 100px 38px, 100% 38px;
+        z-index: 3;
+      }
+
+      .image-panel,
+      .month-panel,
+      .notes-panel {
+        padding-top: 38px;
+      }
+
+      .image-panel {
+        position: relative;
+        min-height: 100%;
+        background: #101413;
+        border-right: 3px solid var(--line);
+        overflow: hidden;
+      }
+
+      .image-stack {
+        position: relative;
+        height: 100%;
+        min-height: 690px;
+      }
+
+      .hero-image {
+        width: 100%;
+        height: 100%;
+        min-height: 690px;
+        object-fit: cover;
+        display: block;
+        filter: saturate(1.02) contrast(1.04);
+      }
+
+      .image-panel::after {
+        content: "";
+        position: absolute;
+        inset: 38px 0 0;
+        background: linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.68));
+        pointer-events: none;
+      }
+
+      .image-caption {
+        position: absolute;
+        left: 20px;
+        right: 20px;
+        bottom: 20px;
+        z-index: 1;
+        color: white;
+        text-shadow: 0 2px 18px rgba(0,0,0,0.55);
+      }
+
+      .image-caption strong {
+        display: block;
+        font-size: clamp(1.8rem, 3.2vw, 4.2rem);
+        line-height: 0.9;
+      }
+
+      .image-caption span {
+        display: block;
+        margin-top: 10px;
+        max-width: 28ch;
+        font-weight: 700;
+      }
+
+      .month-panel {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        min-width: 0;
+      }
+
+      .month-head {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 12px;
+        padding: 26px 28px 18px;
+        border-bottom: 3px solid var(--line);
+      }
+
+      .nav-button {
+        width: 46px;
+        height: 46px;
+        border: 2px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        font-size: 1.3rem;
+        font-weight: 900;
+      }
+
+      .month-title {
+        text-align: center;
+        min-width: 0;
+      }
+
+      .month-title p {
+        margin: 0;
+        color: var(--muted);
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 0.78rem;
+      }
+
+      .month-title h2 {
+        margin: 4px 0 0;
+        font-size: clamp(2rem, 4vw, 4.8rem);
+        line-height: 0.9;
+      }
+
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        grid-auto-rows: minmax(80px, 1fr);
+        min-height: 520px;
+      }
+
+      .weekday,
+      .day {
+        border-right: 1px solid #d5d2cc;
+        border-bottom: 1px solid #d5d2cc;
+      }
+
+      .weekday:nth-child(7),
+      .day:nth-child(7n) {
+        border-right: 0;
+      }
+
+      .weekday {
+        min-height: 44px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+        background: #f8f8f4;
+        font-size: 0.78rem;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .day {
+        position: relative;
+        min-width: 0;
+        min-height: 80px;
+        padding: 8px;
+        background: var(--paper);
+        text-align: left;
+        border-top: 0;
+        border-left: 0;
+        border-radius: 0;
+        color: var(--ink);
+        isolation: isolate;
+        transition: background 160ms ease, transform 160ms ease;
+      }
+
+      .day:hover {
+        background: #fff8e0;
+      }
+
+      .day.outside {
+        color: #aaa49e;
+        background: #faf9f6;
+      }
+
+      .day.in-range {
+        background: var(--range);
+      }
+
+      .day.range-start,
+      .day.range-end {
+        background: var(--accent);
+        color: white;
+      }
+
+      .day.range-start::after,
+      .day.range-end::after {
+        content: "";
+        position: absolute;
+        inset: 5px;
+        border: 2px solid white;
+        border-radius: 6px;
+        pointer-events: none;
+      }
+
+      .day.today .number {
+        background: var(--accent-3);
+        color: #111;
+      }
+
+      .day.has-note .number::after {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent-2);
+        position: absolute;
+        right: -3px;
+        top: -3px;
+        border: 1px solid var(--line);
+      }
+
+      .day.holiday::before {
+        content: attr(data-holiday);
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        padding: 4px 5px;
+        background: rgba(245, 197, 66, 0.86);
+        color: #111;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        font-size: clamp(0.58rem, 1vw, 0.7rem);
+        font-weight: 900;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        z-index: 1;
+      }
+
+      .number {
+        position: relative;
+        display: inline-grid;
+        place-items: center;
+        min-width: 28px;
+        height: 28px;
+        padding: 0 6px;
+        border-radius: 7px;
+        font-weight: 900;
+      }
+
+      .range-summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border-top: 3px solid var(--line);
+        background: #f8f8f4;
+      }
+
+      .summary-item {
+        padding: 16px 18px;
+        border-right: 2px solid var(--line);
+      }
+
+      .summary-item:last-child {
+        border-right: 0;
+      }
+
+      .summary-item span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .summary-item strong {
+        display: block;
+        margin-top: 5px;
+        font-size: clamp(0.92rem, 1.6vw, 1.18rem);
+      }
+
+      .notes-panel {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        border-left: 3px solid var(--line);
+        background:
+          linear-gradient(#ffffff 31px, #dce8e0 32px),
+          #ffffff;
+        background-size: 100% 32px;
+      }
+
+      .notes-head {
+        padding: 26px 22px 17px;
+        border-bottom: 3px solid var(--line);
+        background: var(--paper);
+      }
+
+      .notes-head h2 {
+        margin: 0;
+        font-size: clamp(1.9rem, 3vw, 3.7rem);
+        line-height: 0.9;
+      }
+
+      .notes-head p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .note-editor {
+        display: grid;
+        grid-template-rows: auto minmax(240px, 1fr);
+        gap: 14px;
+        min-height: 0;
+        padding: 22px;
+      }
+
+      .note-mode {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .mode-button {
+        border: 2px solid var(--line);
+        border-radius: var(--radius);
+        padding: 10px 8px;
+        background: #fff;
+        font-weight: 900;
+      }
+
+      .mode-button.active {
+        background: var(--accent-2);
+        color: #fff;
+      }
+
+      textarea {
+        min-width: 0;
+        width: 100%;
+        min-height: 240px;
+        resize: none;
+        border: 2px dashed rgba(23, 23, 23, 0.45);
+        border-radius: var(--radius);
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.78);
+        color: var(--ink);
+        line-height: 1.5;
+        outline: none;
+      }
+
+      textarea:focus {
+        border-style: solid;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 4px var(--accent-soft);
+      }
+
+      .memory-strip {
+        padding: 18px 22px 22px;
+        border-top: 3px solid var(--line);
+        background: var(--paper);
+      }
+
+      .memory-strip h3 {
+        margin: 0 0 10px;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+      }
+
+      .memory-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .memory-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+        border: 2px solid var(--line);
+        border-radius: var(--radius);
+        padding: 10px;
+        background: #fff;
+        font-size: 0.84rem;
+        font-weight: 800;
+      }
+
+      .memory-item small {
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 22px;
+        transform: translate(-50%, 140%);
+        z-index: 10;
+        background: #171717;
+        color: white;
+        border-radius: var(--radius);
+        padding: 12px 16px;
+        font-weight: 800;
+        transition: transform 220ms ease;
+      }
+
+      .toast.show {
+        transform: translate(-50%, 0);
+      }
+
+      .flip {
+        animation: flip 420ms ease;
+      }
+
+      @keyframes flip {
+        0% { transform: rotateX(0deg); opacity: 1; }
+        45% { transform: rotateX(15deg) translateY(-8px); opacity: 0.25; }
+        100% { transform: rotateX(0deg); opacity: 1; }
+      }
+
+      @media (max-width: 1180px) {
+        .calendar-shell {
+          grid-template-columns: minmax(320px, 0.82fr) minmax(520px, 1.18fr);
+        }
+
+        .notes-panel {
+          grid-column: 1 / -1;
+          grid-template-columns: minmax(280px, 0.55fr) 1fr minmax(260px, 0.55fr);
+          grid-template-rows: auto;
+          border-left: 0;
+          border-top: 3px solid var(--line);
+          padding-top: 0;
+        }
+
+        .notes-head,
+        .note-editor,
+        .memory-strip {
+          padding-top: 22px;
+        }
+
+        .notes-head,
+        .note-editor {
+          border-bottom: 0;
+          border-right: 3px solid var(--line);
+        }
+      }
+
+      @media (max-width: 860px) {
+        .app {
+          padding: 12px;
+        }
+
+        .topline {
+          grid-template-columns: 1fr;
+          align-items: start;
+        }
+
+        .toolbar {
+          justify-content: flex-start;
+        }
+
+        .calendar-shell {
+          display: block;
+          min-height: 0;
+        }
+
+        .image-panel,
+        .month-panel,
+        .notes-panel {
+          border-left: 0;
+          border-right: 0;
+        }
+
+        .image-panel {
+          border-bottom: 3px solid var(--line);
+        }
+
+        .image-stack,
+        .hero-image {
+          min-height: 380px;
+          height: 52vh;
+        }
+
+        .month-head {
+          padding: 20px 14px 14px;
+        }
+
+        .calendar-grid {
+          grid-auto-rows: minmax(64px, auto);
+          min-height: auto;
+        }
+
+        .weekday {
+          min-height: 38px;
+          font-size: 0.7rem;
+        }
+
+        .day {
+          min-height: 64px;
+          padding: 5px;
+        }
+
+        .number {
+          min-width: 24px;
+          height: 24px;
+          font-size: 0.82rem;
+        }
+
+        .day.holiday::before {
+          left: 4px;
+          right: 4px;
+          bottom: 4px;
+          font-size: 0.56rem;
+        }
+
+        .range-summary {
+          grid-template-columns: 1fr;
+        }
+
+        .summary-item {
+          border-right: 0;
+          border-bottom: 2px solid var(--line);
+        }
+
+        .summary-item:last-child {
+          border-bottom: 0;
+        }
+
+        .notes-panel {
+          display: block;
+          border-top: 3px solid var(--line);
+        }
+
+        .notes-head,
+        .note-editor,
+        .memory-strip {
+          border-right: 0;
+        }
+
+        .notes-head,
+        .note-editor {
+          border-bottom: 3px solid var(--line);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="topline" aria-label="Calendar introduction">
+        <div>
+          <p class="kicker">Frontend Engineering Challenge</p>
+          <h1>Rangebook Calendar</h1>
+          <p class="microcopy">Pick a start day, pick an end day, and leave the kind of note you would actually come back to.</p>
+        </div>
+        <div class="toolbar" aria-label="Calendar actions">
+          <button class="pill-button" id="todayButton" type="button">Jump to today</button>
+          <button class="pill-button" id="clearButton" type="button">Clear range</button>
+          <button class="pill-button" id="printButton" type="button">Print sheet</button>
+        </div>
+      </section>
+
+      <section class="calendar-shell" aria-label="Interactive wall calendar">
+        <aside class="image-panel" aria-label="Month image">
+          <div class="image-stack" id="imageStack">
+            <img class="hero-image" id="heroImage" alt="Seasonal landscape for the selected month">
+            <div class="image-caption">
+              <strong id="imageTitle">April Light</strong>
+              <span id="imageCopy">A visual anchor for the calendar, tuned to the current month.</span>
+            </div>
+          </div>
+        </aside>
+
+        <section class="month-panel" aria-label="Calendar grid">
+          <header class="month-head">
+            <button class="nav-button" id="prevMonth" type="button" aria-label="Previous month">&lt;</button>
+            <div class="month-title">
+              <p id="yearLabel">2026</p>
+              <h2 id="monthLabel">April</h2>
+            </div>
+            <button class="nav-button" id="nextMonth" type="button" aria-label="Next month">&gt;</button>
+          </header>
+
+          <div>
+            <div class="calendar-grid" id="weekdayGrid" aria-hidden="true"></div>
+            <div class="calendar-grid" id="calendarGrid" role="grid" aria-label="Select a date range"></div>
+          </div>
+
+          <div class="range-summary" aria-live="polite">
+            <div class="summary-item">
+              <span>Start</span>
+              <strong id="startLabel">Choose a date</strong>
+            </div>
+            <div class="summary-item">
+              <span>End</span>
+              <strong id="endLabel">Choose a date</strong>
+            </div>
+            <div class="summary-item">
+              <span>Duration</span>
+              <strong id="durationLabel">0 days</strong>
+            </div>
+          </div>
+        </section>
+
+        <aside class="notes-panel" aria-label="Notes section">
+          <header class="notes-head">
+            <h2>Notes</h2>
+            <p id="noteScope">Month note for April 2026</p>
+          </header>
+
+          <div class="note-editor">
+            <div class="note-mode" role="group" aria-label="Note mode">
+              <button class="mode-button active" id="monthNoteButton" type="button">Month</button>
+              <button class="mode-button" id="rangeNoteButton" type="button">Range</button>
+            </div>
+            <textarea id="noteArea" spellcheck="true" placeholder="Add plans, reminders, links, or a tiny mission briefing..."></textarea>
+          </div>
+
+          <div class="memory-strip">
+            <h3>Saved notes</h3>
+            <div class="memory-list" id="memoryList"></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">Saved</div>
+
+    <script>
+      const monthStories = [
+        {
+          title: "January Reset",
+          copy: "Cold air, clean pages, one honest plan.",
+          image: "https://images.unsplash.com/photo-1483664852095-d6cc6870702d?auto=format&fit=crop&w=1200&q=82",
+          accent: "#2f8f83",
+          range: "rgba(47, 143, 131, 0.18)"
+        },
+        {
+          title: "February Pulse",
+          copy: "Short month. Sharp focus. Soft light.",
+          image: "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=1200&q=82",
+          accent: "#d94f70",
+          range: "rgba(217, 79, 112, 0.16)"
+        },
+        {
+          title: "March Motion",
+          copy: "Green edges, longer walks, faster decisions.",
+          image: "https://images.unsplash.com/photo-1455218873509-8097305ee378?auto=format&fit=crop&w=1200&q=82",
+          accent: "#1aa268",
+          range: "rgba(26, 162, 104, 0.17)"
+        },
+        {
+          title: "April Light",
+          copy: "A visual anchor for the calendar, tuned to the current month.",
+          image: "https://images.unsplash.com/photo-1522748906645-95d8adfd52c7?auto=format&fit=crop&w=1200&q=82",
+          accent: "#e84f3d",
+          range: "rgba(18, 165, 148, 0.18)"
+        },
+        {
+          title: "May Orchard",
+          copy: "Room for a bigger plan and a better picnic.",
+          image: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1200&q=82",
+          accent: "#ef6b4a",
+          range: "rgba(239, 107, 74, 0.17)"
+        },
+        {
+          title: "June Current",
+          copy: "Make space for momentum before the heat arrives.",
+          image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=82",
+          accent: "#008d9b",
+          range: "rgba(0, 141, 155, 0.18)"
+        },
+        {
+          title: "July High Sun",
+          copy: "Long days, loud color, fewer maybes.",
+          image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=82",
+          accent: "#e14f2b",
+          range: "rgba(245, 197, 66, 0.22)"
+        },
+        {
+          title: "August Drift",
+          copy: "Keep the plans breathable and the water close.",
+          image: "https://images.unsplash.com/photo-1471922694854-ff1b63b20054?auto=format&fit=crop&w=1200&q=82",
+          accent: "#0a9f8b",
+          range: "rgba(10, 159, 139, 0.18)"
+        },
+        {
+          title: "September Draft",
+          copy: "New notebooks, clear tables, better rituals.",
+          image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=82",
+          accent: "#cf5b2e",
+          range: "rgba(207, 91, 46, 0.17)"
+        },
+        {
+          title: "October Signal",
+          copy: "Crisp plans and the good kind of deadline.",
+          image: "https://images.unsplash.com/photo-1477414348463-c0eb7f1359b6?auto=format&fit=crop&w=1200&q=82",
+          accent: "#b94631",
+          range: "rgba(185, 70, 49, 0.16)"
+        },
+        {
+          title: "November Table",
+          copy: "Gather the loose threads before the year closes.",
+          image: "https://images.unsplash.com/photo-1476820865390-c52aeebb9891?auto=format&fit=crop&w=1200&q=82",
+          accent: "#557f4f",
+          range: "rgba(85, 127, 79, 0.18)"
+        },
+        {
+          title: "December Glow",
+          copy: "Quiet wins, bright windows, final pages.",
+          image: "https://images.unsplash.com/photo-1482517967863-00e15c9b44be?auto=format&fit=crop&w=1200&q=82",
+          accent: "#c63d4f",
+          range: "rgba(198, 61, 79, 0.17)"
+        }
+      ];
+
+      const holidays = {
+        "01-01": "New Year",
+        "02-14": "Valentine",
+        "03-08": "Womens Day",
+        "04-22": "Earth Day",
+        "05-01": "Labour Day",
+        "06-21": "Solstice",
+        "07-04": "Fourth",
+        "08-15": "Independence",
+        "10-31": "Halloween",
+        "11-14": "Childrens Day",
+        "12-25": "Christmas"
+      };
+
+      const state = {
+        cursor: new Date(2026, 3, 1),
+        start: null,
+        end: null,
+        noteMode: "month",
+        notes: JSON.parse(localStorage.getItem("rangebook-notes") || "{}")
+      };
+
+      const weekdayGrid = document.querySelector("#weekdayGrid");
+      const calendarGrid = document.querySelector("#calendarGrid");
+      const monthLabel = document.querySelector("#monthLabel");
+      const yearLabel = document.querySelector("#yearLabel");
+      const startLabel = document.querySelector("#startLabel");
+      const endLabel = document.querySelector("#endLabel");
+      const durationLabel = document.querySelector("#durationLabel");
+      const noteArea = document.querySelector("#noteArea");
+      const noteScope = document.querySelector("#noteScope");
+      const memoryList = document.querySelector("#memoryList");
+      const imageStack = document.querySelector("#imageStack");
+      const heroImage = document.querySelector("#heroImage");
+      const imageTitle = document.querySelector("#imageTitle");
+      const imageCopy = document.querySelector("#imageCopy");
+      const toast = document.querySelector("#toast");
+      const monthNoteButton = document.querySelector("#monthNoteButton");
+      const rangeNoteButton = document.querySelector("#rangeNoteButton");
+      const formatter = new Intl.DateTimeFormat("en", { month: "long", day: "numeric", year: "numeric" });
+      const shortFormatter = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
+      const monthFormatter = new Intl.DateTimeFormat("en", { month: "long" });
+      const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+      function toKey(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      function fromKey(key) {
+        const [year, month, day] = key.split("-").map(Number);
+        return new Date(year, month - 1, day);
+      }
+
+      function monthKey() {
+        const year = state.cursor.getFullYear();
+        const month = String(state.cursor.getMonth() + 1).padStart(2, "0");
+        return `month:${year}-${month}`;
+      }
+
+      function rangeKey() {
+        if (!state.start || !state.end) return `range:draft:${monthKey()}`;
+        const [start, end] = orderedRange();
+        return `range:${toKey(start)}:${toKey(end)}`;
+      }
+
+      function activeNoteKey() {
+        return state.noteMode === "month" ? monthKey() : rangeKey();
+      }
+
+      function orderedRange() {
+        if (!state.start || !state.end) return [state.start, state.end];
+        return state.start <= state.end ? [state.start, state.end] : [state.end, state.start];
+      }
+
+      function isSameDay(a, b) {
+        return a && b && toKey(a) === toKey(b);
+      }
+
+      function isBetween(date, a, b) {
+        if (!a || !b) return false;
+        const [start, end] = orderedRange();
+        return date > start && date < end;
+      }
+
+      function saveNotes() {
+        localStorage.setItem("rangebook-notes", JSON.stringify(state.notes));
+        showToast("Saved");
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add("show");
+        window.clearTimeout(showToast.timer);
+        showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 1200);
+      }
+
+      function shiftMonth(delta) {
+        saveCurrentNote(false);
+        state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth() + delta, 1);
+        calendarGrid.classList.remove("flip");
+        imageStack.classList.remove("flip");
+        void calendarGrid.offsetWidth;
+        calendarGrid.classList.add("flip");
+        imageStack.classList.add("flip");
+        render();
+      }
+
+      function setRange(date) {
+        if (!state.start || (state.start && state.end)) {
+          state.start = date;
+          state.end = null;
+        } else if (date < state.start) {
+          state.end = state.start;
+          state.start = date;
+        } else {
+          state.end = date;
+          state.noteMode = "range";
+        }
+        render();
+      }
+
+      function saveCurrentNote(announce = true) {
+        const key = activeNoteKey();
+        const value = noteArea.value.trim();
+        if (value) state.notes[key] = value;
+        else delete state.notes[key];
+        localStorage.setItem("rangebook-notes", JSON.stringify(state.notes));
+        if (announce) showToast("Saved");
+      }
+
+      function renderWeekdays() {
+        weekdayGrid.innerHTML = weekdays.map(day => `<div class="weekday">${day}</div>`).join("");
+      }
+
+      function renderImage() {
+        const story = monthStories[state.cursor.getMonth()];
+        heroImage.src = story.image;
+        heroImage.alt = `${story.title} seasonal landscape`;
+        imageTitle.textContent = story.title;
+        imageCopy.textContent = story.copy;
+        document.documentElement.style.setProperty("--accent", story.accent);
+        document.documentElement.style.setProperty("--range", story.range);
+      }
+
+      function renderCalendar() {
+        const year = state.cursor.getFullYear();
+        const month = state.cursor.getMonth();
+        monthLabel.textContent = monthFormatter.format(state.cursor);
+        yearLabel.textContent = year;
+
+        const firstDay = new Date(year, month, 1);
+        const gridStart = new Date(year, month, 1 - firstDay.getDay());
+        const today = new Date();
+        calendarGrid.innerHTML = "";
+
+        for (let i = 0; i < 42; i += 1) {
+          const date = new Date(gridStart);
+          date.setDate(gridStart.getDate() + i);
+          const key = toKey(date);
+          const monthDay = `${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "day";
+          button.setAttribute("role", "gridcell");
+          button.setAttribute("aria-label", formatter.format(date));
+          button.dataset.date = key;
+          button.innerHTML = `<span class="number">${date.getDate()}</span>`;
+
+          if (date.getMonth() !== month) button.classList.add("outside");
+          if (isSameDay(date, today)) button.classList.add("today");
+          if (isSameDay(date, state.start)) button.classList.add("range-start");
+          if (isSameDay(date, state.end)) button.classList.add("range-end");
+          if (isBetween(date, state.start, state.end)) button.classList.add("in-range");
+          if (state.notes[`date:${key}`] || Object.keys(state.notes).some(noteKey => noteKey.includes(key))) button.classList.add("has-note");
+          if (holidays[monthDay]) {
+            button.classList.add("holiday");
+            button.dataset.holiday = holidays[monthDay];
+          }
+
+          button.addEventListener("click", () => setRange(date));
+          calendarGrid.appendChild(button);
+        }
+      }
+
+      function renderSummary() {
+        startLabel.textContent = state.start ? formatter.format(state.start) : "Choose a date";
+        endLabel.textContent = state.end ? formatter.format(state.end) : "Choose a date";
+        if (state.start && state.end) {
+          const [start, end] = orderedRange();
+          const days = Math.round((end - start) / 86400000) + 1;
+          durationLabel.textContent = `${days} day${days === 1 ? "" : "s"}`;
+        } else if (state.start) {
+          durationLabel.textContent = "Pick an end date";
+        } else {
+          durationLabel.textContent = "0 days";
+        }
+      }
+
+      function renderNotes() {
+        monthNoteButton.classList.toggle("active", state.noteMode === "month");
+        rangeNoteButton.classList.toggle("active", state.noteMode === "range");
+        rangeNoteButton.disabled = !state.start;
+
+        const monthName = monthFormatter.format(state.cursor);
+        if (state.noteMode === "month") {
+          noteScope.textContent = `Month note for ${monthName} ${state.cursor.getFullYear()}`;
+        } else if (state.start && state.end) {
+          const [start, end] = orderedRange();
+          noteScope.textContent = `Range note for ${shortFormatter.format(start)} to ${shortFormatter.format(end)}`;
+        } else if (state.start) {
+          noteScope.textContent = `Range note starting ${shortFormatter.format(state.start)}`;
+        } else {
+          noteScope.textContent = "Select dates to attach a range note";
+        }
+
+        noteArea.value = state.notes[activeNoteKey()] || "";
+        renderMemory();
+      }
+
+      function renderMemory() {
+        const entries = Object.entries(state.notes).slice(-4).reverse();
+        if (!entries.length) {
+          memoryList.innerHTML = `<div class="memory-item"><span>No notes yet</span><small>Ready</small></div>`;
+          return;
+        }
+        memoryList.innerHTML = entries.map(([key, value]) => {
+          const label = key.startsWith("month:")
+            ? key.replace("month:", "Month ")
+            : key.replace("range:", "Range ").replaceAll(":", " to ");
+          const preview = value.length > 42 ? `${value.slice(0, 42)}...` : value;
+          return `<div class="memory-item"><span>${preview}</span><small>${label}</small></div>`;
+        }).join("");
+      }
+
+      function render() {
+        renderImage();
+        renderCalendar();
+        renderSummary();
+        renderNotes();
+      }
+
+      document.querySelector("#prevMonth").addEventListener("click", () => shiftMonth(-1));
+      document.querySelector("#nextMonth").addEventListener("click", () => shiftMonth(1));
+      document.querySelector("#todayButton").addEventListener("click", () => {
+        saveCurrentNote(false);
+        const today = new Date();
+        state.cursor = new Date(today.getFullYear(), today.getMonth(), 1);
+        state.start = today;
+        state.end = null;
+        state.noteMode = "range";
+        render();
+      });
+      document.querySelector("#clearButton").addEventListener("click", () => {
+        state.start = null;
+        state.end = null;
+        state.noteMode = "month";
+        render();
+      });
+      document.querySelector("#printButton").addEventListener("click", () => window.print());
+      monthNoteButton.addEventListener("click", () => {
+        saveCurrentNote(false);
+        state.noteMode = "month";
+        renderNotes();
+      });
+      rangeNoteButton.addEventListener("click", () => {
+        if (!state.start) return showToast("Select a date first");
+        saveCurrentNote(false);
+        state.noteMode = "range";
+        renderNotes();
+      });
+      noteArea.addEventListener("input", () => {
+        window.clearTimeout(noteArea.saveTimer);
+        noteArea.saveTimer = window.setTimeout(() => saveCurrentNote(false), 260);
+      });
+      noteArea.addEventListener("blur", () => saveCurrentNote());
+
+      window.addEventListener("keydown", event => {
+        if (event.target === noteArea) return;
+        if (event.key === "ArrowLeft") shiftMonth(-1);
+        if (event.key === "ArrowRight") shiftMonth(1);
+      });
+
+      renderWeekdays();
+      render();
+    </script>
+  </body>
+</html>
