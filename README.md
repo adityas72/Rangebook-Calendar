@@ -54,7 +54,7 @@ The extra layer is motion. Month changes animate instead of snapping. Calendar c
 ## Project Structure
 
 ```text
-interactive-calendar-challenge/
+rangebook-calender/
   assets/
     rangebook-landing.png
   src/
